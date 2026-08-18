@@ -1,4 +1,6 @@
-<!-- Base should be `staging` unless this is a staging -> main promotion. See docs/BRANCHING.md. -->
+<!-- Check the base/compare direction before submitting. Features: base `staging`. Promotions:
+     base `main`, compare `staging` — never the reverse. A PR whose source is `main` fails
+     guard-promotion. See docs/BRANCHING.md. -->
 
 ## What changed
 
