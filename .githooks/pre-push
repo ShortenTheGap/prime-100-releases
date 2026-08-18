@@ -1,0 +1,42 @@
+#!/bin/sh
+# Refuses a direct push to staging or main (production). See docs/BRANCHING.md.
+#
+# Why a hook: the repo is private under a personal Free GitHub account, so
+# server-side branch protection cannot be enabled (the API answers
+# `403: Upgrade to GitHub Pro`). This closes the gap LOCALLY — it catches the
+# muscle-memory `git push` after a commit, which is the mistake that actually
+# happens. It is NOT security: it only runs on machines that opted in, and
+# `--no-verify` bypasses it. Replace it with real protection when the plan allows.
+#
+# Opt in once per clone:  git config core.hooksPath .githooks
+#
+# git feeds pre-push one line per ref on stdin:
+#   <local ref> <local sha> <remote ref> <remote sha>
+# Deleting a remote branch also arrives here (local sha all-zero), and is blocked
+# too — deleting staging or main is never a routine operation.
+
+protected="staging main"
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+	for branch in $protected; do
+		if [ "$remote_ref" = "refs/heads/$branch" ]; then
+			echo "pre-push: refusing to push directly to '$branch'." >&2
+			echo >&2
+			if [ "$branch" = "main" ]; then
+				echo "  main is production. It only ever receives a PR from staging." >&2
+			else
+				echo "  staging only receives PRs from feature/* branches." >&2
+			fi
+			echo >&2
+			echo "  Instead:" >&2
+			echo "    git switch -c feature/<name>" >&2
+			echo "    git push -u origin feature/<name>" >&2
+			echo "    gh pr create --base staging" >&2
+			echo >&2
+			echo "  Deliberate exception (rare): git push --no-verify" >&2
+			exit 1
+		fi
+	done
+done
+
+exit 0
