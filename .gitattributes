@@ -1,0 +1,5 @@
+# Shell scripts must keep LF endings regardless of a dev's core.autocrlf. With CRLF,
+# `#!/bin/sh` becomes `#!/bin/sh\r` and Git for Windows / Linux both fail the script with
+# "bad interpreter" — which for .githooks/pre-push means the guard silently stops working.
+*.sh text eol=lf
+.githooks/* text eol=lf
