@@ -48,7 +48,7 @@ only on private ones.
 | Ruleset: block force pushes | **Force-pushes** to either branch. |
 | Ruleset: restrict deletions | **Deleting** either branch. |
 | Ruleset: required status checks | **A merge while `guard-promotion` is failing.** |
-| `guard-promotion` (in `ci.yml`) | **A PR into `main` from any branch other than `staging`** — because it is a required check. |
+| `guard-promotion` (in `ci.yml`) | **A PR into `main` from any branch other than `staging`**, and **any PR whose source is `main`** (a reversed promotion) — because it is a required check. |
 | `ci.yml` test jobs | Nothing — there are none. This repo has no packages and no test commands. |
 | `.githooks/pre-push` | Local direct pushes, on opted-in clones only. `--no-verify` bypasses it, but the ruleset then rejects the push anyway. Now a fast local failure rather than the last line of defence. |
 
@@ -145,6 +145,18 @@ just keeps the branch list readable.
 - **Check the base branch on every PR.** Even with `staging` as default, a hand-retargeted
   PR or one opened from a stale tab can land on `main`. Fix the base selector rather than
   relying on `guard-promotion` to catch it.
+- **A promotion opened backwards looks harmless.** Because `staging` is the default branch,
+  any compare page opened without an explicit range pre-fills `base: staging`, leaving
+  `compare: main` a single click away — a `main -> staging` PR that GitHub happily reports as
+  "Able to merge" with an empty diff. `guard-promotion` now fails any PR whose source is
+  `main`, but the cheap fix is to open the range explicitly, in this order:
+
+  ```
+  https://github.com/ShortenTheGap/prime-100-releases/compare/main...staging?expand=1
+  ```
+
+  `main...staging` means base `main`, compare `staging`. Reversing those two words reverses
+  the PR.
 
 ## Admin-task record
 

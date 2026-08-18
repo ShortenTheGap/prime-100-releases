@@ -25,25 +25,43 @@ jobs:
   # following the rules in docs/BRANCHING.md: explicit `name:` equal to the job key
   # so the status-check context stays stable, no external infra, pinned runtime.
 
-  # Nothing reaches production except a promotion from staging. GitHub cannot express
-  # this as a branch rule even on paid plans — rulesets have no source-branch
-  # condition — so it lives here permanently rather than as a stopgap.
+  # Nothing reaches production except a promotion from staging, and nothing flows back
+  # out of production. GitHub cannot express either as a branch rule even on paid plans
+  # — rulesets have no source-branch condition — so this lives here permanently rather
+  # than as a stopgap.
+  #
+  # Two directions are wrong, and they fail for different reasons:
+  #   feature -> main    skips integration entirely.
+  #   main -> anything   is a reversed promotion. Easy to open by accident, because the
+  #                      default branch is staging, so GitHub pre-fills `base: staging`
+  #                      on any compare page opened without an explicit range — leaving
+  #                      `compare: main` one click away. Its diff is usually empty,
+  #                      which makes it look harmless rather than wrong.
   #
   # Deliberately NOT gated by a job-level `if` on the base branch: the job runs on
   # every PR and exits 0 when the base isn't main, so the check always reports a
   # real conclusion. A skipped check-run is unreliable as a *required* check later.
+  #
+  # Do not rename this job. `guard-promotion` is a required status check on both
+  # branches; the context string must stay stable or the requirement silently detaches.
   guard-promotion:
     name: guard-promotion
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Only staging may promote into main
+      - name: Only staging may promote into main, and main may never be the source
         # Branch names are attacker-controlled on fork PRs — read them via env, never
         # interpolate ${{ }} into the shell.
         env:
           BASE: ${{ github.base_ref }}
           HEAD: ${{ github.head_ref }}
         run: |
+          # Checked before the base test below: a reversed promotion has base=staging,
+          # which that test would wave through as "not a promotion".
+          if [ "$HEAD" = "main" ]; then
+            echo "::error::main cannot be the source of a pull request (base is '$BASE'). This is a promotion pointing backwards — swap the base and compare branches so it reads staging -> main. If you genuinely need a commit that exists only on main, cherry-pick it into staging instead. See docs/BRANCHING.md."
+            exit 1
+          fi
           if [ "$BASE" != "main" ]; then
             echo "Base is '$BASE', not main — promotion guard does not apply."
             exit 0
