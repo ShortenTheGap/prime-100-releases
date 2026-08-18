@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [staging, main]
+  push:
+    branches: [staging, main]
+
+# Superseded runs on the same PR are pointless; cancel them.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # No per-package test jobs: this repo contains no packages and no test commands.
+  # It is a release-hosting repo — the desktop app's `latest.json` and the whisper
+  # voice-dictation assets ship as GitHub Release assets, not as tracked source, so
+  # there is nothing here for a suite to build, lint, or type-check.
+  #
+  # When checkable content does land in the tree (a committed `latest.json`, a
+  # publish script, anything with a test command), add one job per package here,
+  # following the rules in docs/BRANCHING.md: explicit `name:` equal to the job key
+  # so the status-check context stays stable, no external infra, pinned runtime.
+
+  # Nothing reaches production except a promotion from staging. GitHub cannot express
+  # this as a branch rule even on paid plans — rulesets have no source-branch
+  # condition — so it lives here permanently rather than as a stopgap.
+  #
+  # Deliberately NOT gated by a job-level `if` on the base branch: the job runs on
+  # every PR and exits 0 when the base isn't main, so the check always reports a
+  # real conclusion. A skipped check-run is unreliable as a *required* check later.
+  guard-promotion:
+    name: guard-promotion
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only staging may promote into main
+        # Branch names are attacker-controlled on fork PRs — read them via env, never
+        # interpolate ${{ }} into the shell.
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$BASE" != "main" ]; then
+            echo "Base is '$BASE', not main — promotion guard does not apply."
+            exit 0
+          fi
+          if [ "$HEAD" != "staging" ]; then
+            echo "::error::'$HEAD' cannot merge straight into main (production). Merge it into staging first, then promote staging -> main. See docs/BRANCHING.md."
+            exit 1
+          fi
+          echo "staging -> main promotion: allowed."
