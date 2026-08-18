@@ -5,8 +5,9 @@ Hosts Prime 100 OS desktop app releases (auto-updater `latest.json`) and the whi
 ## Branches
 
 `staging` is the integration branch; `main` is production. Cut every `feature/*` from
-`staging`, PR it back into `staging` (squash), then promote `staging` → `main` with a merge
-commit. Never push straight to either.
+`staging`, PR it back into `staging`, then promote `staging` → `main`. Both branches allow
+**merge commits only** and both require a pull request — direct pushes, force-pushes, squash
+merges and branch deletion are rejected by ruleset.
 
 One-time setup in your clone:
 

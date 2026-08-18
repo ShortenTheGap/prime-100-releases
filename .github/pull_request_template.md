@@ -13,6 +13,7 @@
 
 - [ ] Base branch is correct (`staging` for features, `main` only for a promotion from `staging`)
 - [ ] CI is green
-- [ ] Approved by someone other than the author
+- [ ] Reviewed (the rulesets require 0 approvals — single-account repo, so this is on the honour system)
 
-<!-- Promotions only (staging -> main): merge with a MERGE COMMIT, not squash. -->
+<!-- Merge with a MERGE COMMIT. Both branches allow merge commits only; squash and rebase are
+     rejected by ruleset. Use `gh pr merge <n> --merge`. -->
